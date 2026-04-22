@@ -1,122 +1,126 @@
-# RESUMIND — AI Resume Analyzer + Career Intelligence System
+# RESUMIND
 
-A full-stack AI-powered resume analyzer that computes semantic similarity between your resume and a job description using `sentence-transformers`, extracts skills with `spaCy`, and presents results in a futuristic React dashboard.
+Resumind is a full‑stack resume + job description analyzer.
+Upload a PDF resume, paste a JD, and it returns a match score, skill gaps, and career suggestions — plus a score breakdown that combines semantic similarity with structured resume sections (projects / internships / coursework).
 
----
+## Features
 
-## 🗂 Project Structure
+- Auth (register/login) with JWT stored in `localStorage`
+- Resume vs JD analysis (PDF upload + JD text)
+- Match score + skill gap (matching skills + missing skills)
+- Score breakdown:
+  - `semantic_score` (resume ↔ JD similarity)
+  - `structured_score` (relevance from projects/internships/coursework/etc)
+- History: saves every analysis per user (SQLite)
+- Career options: explores roles across multiple domains (tech + finance + core)
+- About page + simple in-app navigation (no router)
+
+## Tech Stack
+
+- Backend: FastAPI, SQLAlchemy, SQLite
+- Auth: JWT (`python-jose`), password hashing (`passlib`)
+- NLP: `sentence-transformers` (embeddings) + `spaCy` (skill extraction)
+- Frontend: React + Vite + Tailwind CSS + Framer Motion
+
+## Project Structure (high level)
 
 ```
-resumind/
-├── backend/
-│   ├── main.py                  # FastAPI entry point
-│   ├── requirements.txt
-│   ├── routes/
-│   │   └── resume.py            # POST /api/analyze
-│   ├── services/
-│   │   ├── parser.py            # PDF text extraction (PyMuPDF)
-│   │   ├── skill_extractor.py   # spaCy skill detection (60+ skills)
-│   │   └── matcher.py           # Cosine similarity + skill gap
-│   └── models/
-│       └── schemas.py           # Pydantic response schema
-└── frontend/
-    ├── index.html
-    ├── vite.config.js
-    ├── tailwind.config.js
-    └── src/
-        ├── App.jsx
-        ├── main.jsx
-        ├── index.css
-        └── pages/
-            ├── HeroPage.jsx     # Animated hero with Three.js orb
-            ├── UploadPage.jsx   # PDF upload + JD textarea
-            └── Dashboard.jsx    # Results: score, skills, suggestions
+backend/          # FastAPI app
+  main.py         # app entry
+  db.py           # SQLite + lightweight migrations
+  routes/         # auth, resume analyze, history
+  services/       # parser, skill extractor, matcher
+  models/         # ORM + Pydantic schemas
+
+frontend/         # React app (Vite)
+  src/lib/api.js   # axios client (+ token header)
+  src/pages/       # Hero / Upload / Dashboard / History / About / etc
+
+setup_backend.*   # convenience setup scripts
+setup_frontend.*
 ```
 
----
+## Quick Start (Windows)
 
-## ⚡ Quick Start
+### 1) Backend
 
-### 1. Backend
+Option A (recommended): run the setup script
 
-```bash
+```bat
+setup_backend.bat
+```
+
+Option B (manual)
+
+```powershell
 cd backend
-
-# Create virtual environment
 python -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
-
-# Install dependencies
+venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-
-# Download spaCy English model
 python -m spacy download en_core_web_sm
-
-# Start server
-uvicorn main:app --reload --port 8000
+python -m uvicorn main:app --reload --port 8000
 ```
 
-Backend runs at: http://localhost:8000
-API docs at:    http://localhost:8000/docs
+Backend runs at `http://127.0.0.1:8000` (docs: `http://127.0.0.1:8000/docs`).
 
----
+### 2) Frontend
 
-### 2. Frontend
+Option A: run the setup script
 
-```bash
+```bat
+setup_frontend.bat
+```
+
+Option B (manual)
+
+```powershell
 cd frontend
-
-# Install dependencies
 npm install
-
-# Start dev server
 npm run dev
 ```
 
-Frontend runs at: http://localhost:5173
+Frontend runs at `http://localhost:5173`.
+In development, Vite proxies `/api` → `http://localhost:8000`.
 
----
+## Environment Variables
 
-## 🔌 API Reference
+Backend supports these environment variables:
 
-### POST /api/analyze
+- `RESUMIND_JWT_SECRET` (default: `dev-secret-change-me`)
+- `RESUMIND_JWT_ALG` (default: `HS256`)
+- `RESUMIND_JWT_EXPIRES_MIN` (default: `43200` = 30 days)
+- `RESUMIND_DB_URL` (optional; defaults to local SQLite file under `backend/`)
 
-**Request** (multipart/form-data):
-| Field | Type | Description |
-|---|---|---|
-| `file` | File (PDF) | Resume PDF |
-| `job_description` | string | Full job description text |
+For production, set `RESUMIND_JWT_SECRET` to a strong random value.
 
-**Response** (JSON):
-```json
-{
-  "match_score": 74,
-  "matching_skills": ["Python", "SQL", "Machine Learning"],
-  "missing_skills": ["Docker", "Kubernetes"]
-}
-```
+## API (summary)
 
----
+All endpoints are under `/api`.
 
-## 🛠 Tech Stack
+### Auth
 
-| Layer | Technology |
-|---|---|
-| Backend | FastAPI + Uvicorn |
-| PDF Parsing | PyMuPDF (fitz) |
-| NLP | spaCy (en_core_web_sm) |
-| Embeddings | sentence-transformers (all-MiniLM-L6-v2) |
-| Similarity | scikit-learn cosine_similarity |
-| Frontend | React 18 + Vite |
-| Styling | Tailwind CSS |
-| Animation | Framer Motion + Three.js |
-| HTTP | Axios |
+- `POST /api/auth/register` → `{ access_token, token_type }`
+- `POST /api/auth/login` → `{ access_token, token_type }`
+- `GET /api/me` → current user
 
----
+### Resume analysis
 
-## 📝 Notes
+- `POST /api/analyze` (multipart/form-data)
+  - fields: `file` (PDF), `job_description` (string)
+  - returns:
+    - `match_score` (0–100)
+    - `semantic_score` (0–100, optional)
+    - `structured_score` (0–100, optional)
+    - `matching_skills`, `missing_skills`, `resume_skills`
+    - `resume_meta` (structured sections)
 
-- First run downloads `all-MiniLM-L6-v2` model (~90MB) automatically
-- Resume must be a text-based PDF (not a scanned image)
-- Skill list covers 60+ technologies across ML, web, cloud, DevOps, and databases
-- Vite proxies `/api` requests to `localhost:8000` in development
+### History
+
+- `GET /api/history` → list of saved analyses
+- `GET /api/history/{id}` → full detail for one analysis (includes `semantic_score` / `structured_score` when available)
+
+## Notes / Troubleshooting
+
+- PDF must contain selectable text (scanned images won’t parse well).
+- First run may download ML models (network required).
+- If you see dependency/wheel issues on very new Python versions, use Python 3.11/3.12 for smoother installs.
