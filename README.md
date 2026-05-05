@@ -10,7 +10,8 @@ Upload a PDF resume, paste a JD, and it returns a match score, skill gaps, and c
 - Match score + skill gap (matching skills + missing skills)
 - Score breakdown:
   - `semantic_score` (resume ↔ JD similarity)
-  - `structured_score` (relevance from projects/internships/coursework/etc)
+  - `structured_score` (skills-first relevance: ~80% skills, ~10% projects, ~10% coursework)
+  - `match_score` is a hybrid of structured + semantic (defaults: ~60% structured, ~40% semantic)
 - History: saves every analysis per user (SQLite)
 - Career options: explores roles across multiple domains (tech + finance + core)
 - About page + simple in-app navigation (no router)
@@ -124,3 +125,8 @@ All endpoints are under `/api`.
 - PDF must contain selectable text (scanned images won’t parse well).
 - First run may download ML models (network required).
 - If you see dependency/wheel issues on very new Python versions, use Python 3.11/3.12 for smoother installs.
+
+### Skills extraction tips
+
+- Skills are extracted from a curated `SKILLS_DB` plus spaCy noun-chunk matching.
+- You can extend the skills list without changing code by setting `RESUMIND_EXTRA_SKILLS_PATH` to a newline-separated text file of additional skills.

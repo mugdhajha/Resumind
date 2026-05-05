@@ -79,8 +79,8 @@ async def analyze_resume(
         resume_text=resume_text,
         job_description=job_description,
         resume_meta=resume_meta,
+        resume_skills=resume_skills,
         job_skills=job_skills,
-        semantic_weight=0.7,
     )
 
     # ── Compute skill gap ────────────────────────────────────────────────

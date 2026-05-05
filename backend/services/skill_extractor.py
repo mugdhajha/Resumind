@@ -1,6 +1,7 @@
 import re
 import spacy
 from typing import List, Set
+import os
 
 # Load spaCy model (small English model for NLP)
 try:
@@ -59,6 +60,33 @@ SKILLS_DB: Set[str] = {
     # Security
     "cybersecurity", "oauth", "jwt", "ssl", "encryption",
 }
+
+
+def _load_extra_skills() -> Set[str]:
+    """Optionally load extra skills from a newline-separated text file.
+
+    Set env var: RESUMIND_EXTRA_SKILLS_PATH
+    File format: one skill per line (comments with # allowed).
+    """
+    path = os.getenv("RESUMIND_EXTRA_SKILLS_PATH")
+    if not path:
+        return set()
+    try:
+        if not os.path.exists(path):
+            return set()
+        extra: Set[str] = set()
+        with open(path, "r", encoding="utf-8") as f:
+            for line in f:
+                raw = (line or "").strip()
+                if not raw or raw.startswith("#"):
+                    continue
+                extra.add(raw.lower())
+        return extra
+    except Exception:
+        return set()
+
+
+SKILLS_DB |= _load_extra_skills()
 
 
 def _normalize(text: str) -> str:
